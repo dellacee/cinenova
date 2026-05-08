@@ -1,0 +1,72 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+build/
+.next/
+.turbo/
+.nest/
+out/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# os
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# coverage
+coverage/
+.nyc_output/
+htmlcov/
+*.lcov
+
+# prisma
+packages/db/prisma/migrations/dev.db*
+packages/db/.env
+
+# docker
+.docker/
+
+# misc
+*.tsbuildinfo
+.eslintcache
+.cache/
+tmp/
+temp/
+
+# playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# vercel
+.vercel/

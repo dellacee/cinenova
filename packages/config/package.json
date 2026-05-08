@@ -1,0 +1,16 @@
+{
+  "name": "@cinenova/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Shared lint / format / tsconfig presets",
+  "license": "MIT",
+  "exports": {
+    "./eslint": "./eslint/index.cjs",
+    "./prettier": "./prettier/index.cjs",
+    "./tsconfig/base": "./tsconfig/base.json",
+    "./tsconfig/nestjs": "./tsconfig/nestjs.json",
+    "./tsconfig/nextjs": "./tsconfig/nextjs.json",
+    "./tsconfig/library": "./tsconfig/library.json"
+  },
+  "files": ["eslint", "prettier", "tsconfig"]
+}
