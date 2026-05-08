@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Calendar, Clock, Globe, Star, Youtube } from 'lucide-react';
 
+import { ReviewSummaryCard } from '@/components/ai/review-summary-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { serverFetch, ApiError } from '@/lib/api-client';
@@ -89,6 +90,8 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
           )}
 
           <p className="text-base leading-relaxed text-muted-foreground">{movie.overview}</p>
+
+          <ReviewSummaryCard movieId={movie.id} />
 
           {movie.trailerYoutubeId && (
             <Button asChild variant="outline">

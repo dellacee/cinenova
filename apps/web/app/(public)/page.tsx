@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
+import { RecommendShelf } from '@/components/ai/recommend-shelf';
 import { Hero } from '@/components/home/hero';
 import { MovieCard, type MovieCardItem } from '@/components/movies/movie-card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ export default async function HomePage() {
         href="/movies?status=NOW_SHOWING"
         movies={nowShowing.status === 'fulfilled' ? nowShowing.value.data : []}
       />
+      <RecommendShelf />
       <Section
         title="Sắp chiếu"
         href="/movies?status=COMING_SOON"
