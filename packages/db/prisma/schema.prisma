@@ -1,0 +1,563 @@
+// CineNova database schema
+// See docs/superpowers/specs/2026-05-08-cinenova-design.md §6 for the full data model.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgvector(map: "vector", schema: "public")]
+}
+
+// =============================================================================
+// IDENTITY DOMAIN
+// =============================================================================
+
+enum UserRole {
+  USER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String?
+  fullName        String
+  phone           String?
+  avatarUrl       String?
+  role            UserRole  @default(USER)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  refreshTokens RefreshToken[]
+  bookings      Booking[]
+  reviews       Review[]
+  chatSessions  ChatSession[]
+  auditLogs     AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  provider          String
+  providerAccountId String
+  type              String
+  refreshToken      String? @db.Text
+  accessToken       String? @db.Text
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String? @db.Text
+  sessionState      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// =============================================================================
+// CATALOG DOMAIN
+// =============================================================================
+
+enum MovieStatus {
+  COMING_SOON
+  NOW_SHOWING
+  ARCHIVED
+}
+
+enum AgeRating {
+  P
+  K
+  T13
+  T16
+  T18
+  C
+}
+
+model Movie {
+  id               String       @id @default(cuid())
+  tmdbId           Int          @unique
+  slug             String       @unique
+  title            String
+  originalTitle    String?
+  overview         String       @db.Text
+  posterUrl        String?
+  backdropUrl      String?
+  trailerYoutubeId String?
+  runtimeMin       Int
+  releaseDate      DateTime
+  ageRating        AgeRating    @default(T13)
+  status           MovieStatus  @default(COMING_SOON)
+  voteAverage      Float?
+  voteCount        Int?
+  popularity       Float?
+  director         String?
+  cast             Json?
+  language         String       @default("vi")
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+
+  genres         MovieGenre[]
+  showtimes      Showtime[]
+  reviews        Review[]
+  reviewSummary  ReviewSummary?
+  embedding      MovieEmbedding?
+
+  @@index([status])
+  @@index([releaseDate])
+  @@index([slug])
+  @@map("movies")
+}
+
+model Genre {
+  id        Int          @id
+  name      String       @unique
+  slug      String       @unique
+  movies    MovieGenre[]
+
+  @@map("genres")
+}
+
+model MovieGenre {
+  movieId String
+  genreId Int
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  genre Genre @relation(fields: [genreId], references: [id], onDelete: Cascade)
+
+  @@id([movieId, genreId])
+  @@index([genreId])
+  @@map("movie_genres")
+}
+
+/// One row per movie. Embedding generated from title + overview + genres + cast.
+/// Vector dimension matches Gemini text-embedding-004 (768).
+model MovieEmbedding {
+  movieId   String                       @id
+  embedding Unsupported("vector(768)")?
+  updatedAt DateTime                     @updatedAt
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@map("movie_embeddings")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  userId      String
+  movieId     String
+  rating      Int
+  text        String   @db.Text
+  sentiment   Float?
+  isModerated Boolean  @default(false)
+  flags       Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, movieId])
+  @@index([movieId, createdAt])
+  @@map("reviews")
+}
+
+model ReviewSummary {
+  movieId          String   @id
+  bullets          Json
+  overallSentiment Float
+  reviewCount      Int
+  generatedAt      DateTime @default(now())
+
+  movie Movie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@map("review_summaries")
+}
+
+// =============================================================================
+// VENUE DOMAIN
+// =============================================================================
+
+model Theater {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  city        String
+  district    String?
+  addressLine String
+  lat         Float?
+  lng         Float?
+  phone       String?
+  imageUrl    String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  rooms ScreeningRoom[]
+
+  @@index([city])
+  @@index([slug])
+  @@map("theaters")
+}
+
+model ScreeningRoom {
+  id         String    @id @default(cuid())
+  theaterId  String
+  name       String
+  layoutJson Json
+  rowsCount  Int
+  colsCount  Int
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  theater   Theater    @relation(fields: [theaterId], references: [id], onDelete: Cascade)
+  seats     Seat[]
+  showtimes Showtime[]
+
+  @@index([theaterId])
+  @@map("screening_rooms")
+}
+
+enum SeatType {
+  STANDARD
+  VIP
+  COUPLE
+}
+
+model Seat {
+  id       String   @id @default(cuid())
+  roomId   String
+  row      String
+  col      Int
+  type     SeatType @default(STANDARD)
+  isActive Boolean  @default(true)
+
+  room          ScreeningRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  bookingSeats  BookingSeat[]
+
+  @@unique([roomId, row, col])
+  @@index([roomId])
+  @@map("seats")
+}
+
+// =============================================================================
+// SCHEDULING DOMAIN
+// =============================================================================
+
+enum ShowtimeFormat {
+  D2
+  D3
+  IMAX
+}
+
+model Showtime {
+  id            String         @id @default(cuid())
+  movieId       String
+  roomId        String
+  startAt       DateTime
+  endAt         DateTime
+  format        ShowtimeFormat @default(D2)
+  basePriceVnd  Int
+  isCancelled   Boolean        @default(false)
+  version       Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  movie    Movie         @relation(fields: [movieId], references: [id], onDelete: Restrict)
+  room     ScreeningRoom @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  bookings Booking[]
+
+  @@unique([roomId, startAt])
+  @@index([movieId, startAt])
+  @@index([startAt])
+  @@map("showtimes")
+}
+
+// =============================================================================
+// BOOKING & PAYMENT DOMAIN
+// =============================================================================
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+model Booking {
+  id                 String        @id @default(cuid())
+  userId             String
+  showtimeId         String
+  status             BookingStatus @default(PENDING)
+  totalAmountVnd     Int
+  discountAmountVnd  Int           @default(0)
+  finalAmountVnd     Int
+  paymentRef         String?
+  qrToken            String?       @unique
+  expiresAt          DateTime
+  confirmedAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  showtime    Showtime            @relation(fields: [showtimeId], references: [id], onDelete: Restrict)
+  seats       BookingSeat[]
+  concessions BookingConcession[]
+  vouchers    BookingVoucher[]
+  payments    Payment[]
+
+  @@index([userId, status])
+  @@index([showtimeId, status])
+  @@index([status, expiresAt])
+  @@map("bookings")
+}
+
+model BookingSeat {
+  id                String   @id @default(cuid())
+  bookingId         String
+  seatId            String
+  showtimeId        String
+  priceSnapshotVnd  Int
+  createdAt         DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  seat    Seat    @relation(fields: [seatId], references: [id], onDelete: Restrict)
+
+  /// Partial unique enforced via raw SQL migration:
+  /// CREATE UNIQUE INDEX booking_seats_confirmed_unique
+  /// ON booking_seats (showtime_id, seat_id)
+  /// WHERE booking_id IN (SELECT id FROM bookings WHERE status = 'CONFIRMED');
+  @@unique([bookingId, seatId])
+  @@index([showtimeId])
+  @@map("booking_seats")
+}
+
+enum ConcessionType {
+  COMBO
+  POPCORN
+  DRINK
+  SNACK
+}
+
+model ConcessionItem {
+  id          String         @id @default(cuid())
+  name        String
+  description String?        @db.Text
+  type        ConcessionType
+  priceVnd    Int
+  imageUrl    String?
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  bookings BookingConcession[]
+
+  @@index([type, isActive])
+  @@map("concession_items")
+}
+
+model BookingConcession {
+  id               String   @id @default(cuid())
+  bookingId        String
+  itemId           String
+  qty              Int
+  priceSnapshotVnd Int
+
+  booking Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  item    ConcessionItem @relation(fields: [itemId], references: [id], onDelete: Restrict)
+
+  @@index([bookingId])
+  @@map("booking_concessions")
+}
+
+enum VoucherDiscountType {
+  PERCENT
+  FIXED
+}
+
+enum VoucherScope {
+  ALL
+  MOVIE
+  THEATER
+}
+
+model Voucher {
+  id            String              @id @default(cuid())
+  code          String              @unique
+  description   String?
+  discountType  VoucherDiscountType
+  discountValue Int
+  minSpendVnd   Int                 @default(0)
+  maxDiscountVnd Int?
+  validFrom     DateTime
+  validTo       DateTime
+  maxUses       Int
+  usedCount     Int                 @default(0)
+  scope         VoucherScope        @default(ALL)
+  scopeRefId    String?
+  isActive      Boolean             @default(true)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  bookings BookingVoucher[]
+
+  @@index([code, isActive])
+  @@index([validTo])
+  @@map("vouchers")
+}
+
+model BookingVoucher {
+  bookingId          String
+  voucherId          String
+  discountAppliedVnd Int
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  voucher Voucher @relation(fields: [voucherId], references: [id], onDelete: Restrict)
+
+  @@id([bookingId, voucherId])
+  @@map("booking_vouchers")
+}
+
+enum PaymentProvider {
+  VNPAY
+  STRIPE
+  MOCK
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model Payment {
+  id          String          @id @default(cuid())
+  bookingId   String
+  provider    PaymentProvider
+  providerRef String          @unique
+  status      PaymentStatus   @default(PENDING)
+  amountVnd   Int
+  rawPayload  Json?
+  paidAt      DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([status])
+  @@map("payments")
+}
+
+// =============================================================================
+// AI DOMAIN
+// =============================================================================
+
+model ChatSession {
+  id            String        @id @default(cuid())
+  userId        String?
+  title         String?
+  createdAt     DateTime      @default(now())
+  lastMessageAt DateTime      @default(now())
+
+  user     User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages ChatMessage[]
+
+  @@index([userId, lastMessageAt])
+  @@map("chat_sessions")
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model ChatMessage {
+  id         String   @id @default(cuid())
+  sessionId  String
+  role       ChatRole
+  content    String   @db.Text
+  tokensIn   Int?
+  tokensOut  Int?
+  latencyMs  Int?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
+}
+
+// =============================================================================
+// AUDIT
+// =============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String
+  diff       Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+  @@map("audit_logs")
+}

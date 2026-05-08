@@ -1,0 +1,11 @@
+{
+  "extends": "@cinenova/config/tsconfig/base",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "./dist",
+    "rootDir": "."
+  },
+  "include": ["src/**/*", "seed/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
