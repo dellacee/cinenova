@@ -173,17 +173,17 @@ This repo grows by milestone. Each milestone is a single commit prefixed with it
 
 | Milestone | Status | Description |
 |---|---|---|
-| M0 | scaffold | Monorepo + tooling + CI skeleton |
-| M1 | db | Prisma schema + pgvector + seed |
-| M2 | api-1 | Auth + movies + theaters + showtimes |
-| M3 | api-2 | Booking + seat-lock + VNPay sandbox |
-| M4 | web-1 | Public site (homepage, browse, detail, auth) |
-| M5 | web-2 | Booking flow + seat picker realtime |
-| M6 | admin | Full admin CRUD dashboard |
-| M7 | ai-1 | FastAPI chatbot + recommender |
-| M8 | ai-2 | Web integration (chat widget, "for you", review summary) |
-| M9 | infra | Docker Compose + production deploy |
-| M10 | quality | E2E + k6 + coverage + polish |
+| M0 | done | Monorepo + tooling + lightweight CI |
+| M1 | done | Prisma schema (24 entities) + pgvector + seed |
+| M2 | done | Auth + movies + theaters + showtimes (NestJS) |
+| M3 | done | Booking + Redis seat-lock + VNPay sandbox |
+| M4 | done | Public site: homepage, browse, detail, auth |
+| M5 | done | Realtime seat picker + checkout + e-ticket QR |
+| M6 | done | Admin dashboard CRUD + audit log viewer |
+| M7 | done | FastAPI chatbot (RAG) + hybrid recommender |
+| M8 | done | Web integration: chat widget + recommend shelf + review summary |
+| M9 | done | Docker Compose full stack + Vercel/Render deploy configs |
+| M10 | done | Tests scaffold + 7 ADRs + final docs |
 
 ## Documentation
 
