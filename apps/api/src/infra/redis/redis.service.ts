@@ -1,5 +1,5 @@
 import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 
 @Injectable()
@@ -13,15 +13,35 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       enableReadyCheck: true,
       lazyConnect: true,
     });
+    this.client.on('error', (err) => {
+      this.logger.warn(`Redis error: ${err.message}`);
+    });
   }
 
+  /**
+   * Best-effort eager connect at boot. We swallow failures so the HTTP server
+   * still binds and Render's liveness probe can succeed even if Redis is
+   * temporarily unreachable. ioredis will reconnect lazily on the first
+   * command after the connection comes back.
+   */
   async onModuleInit() {
-    await this.client.connect();
-    this.logger.log('Redis connection established');
+    try {
+      await this.client.connect();
+      this.logger.log('Redis connection established');
+    } catch (err) {
+      this.logger.error(
+        'Redis eager connect failed; continuing — operations will retry',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 
   async onModuleDestroy() {
-    await this.client.quit();
+    try {
+      await this.client.quit();
+    } catch {
+      // Already disconnected — ignore.
+    }
   }
 
   /** Atomic SETNX with TTL — used for seat-locks. Returns true on win. */

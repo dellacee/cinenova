@@ -1,5 +1,5 @@
-import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@cinenova/db';
+import { Injectable, Logger, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
@@ -14,12 +14,29 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     });
   }
 
+  /**
+   * Best-effort eager connect at boot. We swallow failures here so the HTTP
+   * server still binds and Render's liveness probe can succeed even if the
+   * database is briefly unreachable (Neon scale-to-zero cold start, transient
+   * network issue, etc.). Subsequent queries will reconnect on demand.
+   */
   async onModuleInit() {
-    await this.$connect();
-    this.logger.log('Postgres connection established');
+    try {
+      await this.$connect();
+      this.logger.log('Postgres connection established');
+    } catch (err) {
+      this.logger.error(
+        'Postgres eager connect failed; continuing — queries will retry',
+        err instanceof Error ? err.stack : String(err),
+      );
+    }
   }
 
   async onModuleDestroy() {
-    await this.$disconnect();
+    try {
+      await this.$disconnect();
+    } catch {
+      // Already disconnected — ignore.
+    }
   }
 }
