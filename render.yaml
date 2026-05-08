@@ -30,7 +30,7 @@ services:
         value: https://cinenova.vercel.app
       - key: PAYMENT_PROVIDER
         value: mock
-    healthCheckPath: /health/readiness
+    healthCheckPath: /api/health/liveness
 
   - type: web
     name: cinenova-ai

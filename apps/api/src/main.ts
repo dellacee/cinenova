@@ -21,7 +21,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix('api', { exclude: ['health', 'metrics'] });
+  app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   // Validation is handled per-route via parseWith() with Zod schemas (see
