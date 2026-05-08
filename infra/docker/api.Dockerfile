@@ -35,6 +35,6 @@ COPY --from=builder /repo /app
 
 WORKDIR /app/apps/api
 
-EXPOSE 4000
+EXPOSE 10000
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/main.js"]
