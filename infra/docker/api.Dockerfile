@@ -7,14 +7,18 @@ WORKDIR /repo
 RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
-# Workspace manifests. pnpm-lock.yaml is intentionally not committed; install
-# runs with --no-frozen-lockfile and resolves at build time.
+# Workspace manifests
 COPY pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
 
 RUN pnpm install --no-frozen-lockfile --filter "@cinenova/api..."
+
+# Compile workspace packages BEFORE the api so that nest build can resolve
+# them through their package.json "main" → dist/index.js entries.
 RUN pnpm --filter "@cinenova/db" db:generate || true
+RUN pnpm --filter "@cinenova/shared" build
+RUN pnpm --filter "@cinenova/db" build
 RUN pnpm --filter "@cinenova/api" build
 
 # ----- runner -----
