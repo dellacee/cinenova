@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm --filter @cinenova/db db:generate && pnpm --filter @cinenova/web build",
-  "installCommand": "npm install -g pnpm@9.15.0 && pnpm install --no-frozen-lockfile",
+  "installCommand": "corepack enable && corepack prepare pnpm@9.15.0 --activate && pnpm install --no-frozen-lockfile",
   "outputDirectory": "apps/web/.next",
   "framework": "nextjs"
 }
