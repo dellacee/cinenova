@@ -7,30 +7,31 @@ WORKDIR /repo
 RUN apk add --no-cache libc6-compat openssl
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json tsconfig.base.json ./
+# Workspace manifests. pnpm-lock.yaml is intentionally not committed; install
+# runs with --no-frozen-lockfile and resolves at build time.
+COPY pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/api ./apps/api
 
-RUN pnpm install --frozen-lockfile --filter "@cinenova/api..."
+RUN pnpm install --no-frozen-lockfile --filter "@cinenova/api..."
 RUN pnpm --filter "@cinenova/db" db:generate || true
 RUN pnpm --filter "@cinenova/api" build
-
-# Prune dev deps for the runtime image.
-RUN pnpm --filter "@cinenova/api" deploy --prod /pruned
 
 # ----- runner -----
 FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV PORT=4000
 
-RUN apk add --no-cache openssl
-RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 api
+RUN apk add --no-cache openssl tini
 
-COPY --from=builder --chown=api:nodejs /pruned ./
-COPY --from=builder --chown=api:nodejs /repo/packages/db/prisma ./prisma
+# Copy the resolved workspace from the builder. Free-tier sized; simpler than
+# pnpm deploy (which would require a lockfile).
+COPY --from=builder /repo /app
 
-USER api
+WORKDIR /app/apps/api
+
 EXPOSE 4000
-
+ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/main.js"]

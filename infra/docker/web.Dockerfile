@@ -7,14 +7,16 @@ WORKDIR /repo
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json tsconfig.base.json ./
+# Workspace manifests. pnpm-lock.yaml is intentionally not committed; install
+# runs with --no-frozen-lockfile and resolves at build time.
+COPY pnpm-workspace.yaml package.json turbo.json tsconfig.base.json ./
 COPY packages ./packages
 COPY apps/web ./apps/web
 
-RUN pnpm install --frozen-lockfile --filter "@cinenova/web..."
+RUN pnpm install --no-frozen-lockfile --filter "@cinenova/web..."
 RUN pnpm --filter "@cinenova/web" build
 
-# ----- runner -----
+# ----- runner (Next.js standalone) -----
 FROM node:20-alpine AS runner
 WORKDIR /app
 
