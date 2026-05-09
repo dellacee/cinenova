@@ -39,7 +39,11 @@ async function bootstrap() {
   const doc = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('docs', app, doc, { swaggerOptions: { persistAuthorization: true } });
 
-  const port = Number(process.env.API_PORT ?? process.env.PORT ?? 4000);
+  // Order matters: platforms like Render inject PORT and expect us to bind there.
+  // API_PORT is our local-dev default and gets a Zod default of 4000 — if listed
+  // first it would override the platform-injected PORT after @nestjs/config writes
+  // validated values back into process.env.
+  const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
   await app.listen(port, '0.0.0.0');
 
   app.get(Logger).log(`CineNova API ready at http://localhost:${port} (docs at /docs)`);
