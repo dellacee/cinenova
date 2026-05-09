@@ -32,7 +32,11 @@ interface ShowtimeRow {
   startAt: string;
   format: 'D2' | 'D3' | 'IMAX';
   basePriceVnd: number;
-  room: { id: string; name: string; theater: { id: string; slug: string; name: string; city: string } };
+  room: {
+    id: string;
+    name: string;
+    theater: { id: string; slug: string; name: string; city: string };
+  };
 }
 
 export default async function MovieDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -41,8 +45,12 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
   try {
     movie = await serverFetch<Movie>(`/movies/${slug}`, { revalidate: 60 });
   } catch (err) {
+    // Treat any upstream failure as not-found rather than letting the page
+    // hang or 500. The notFound() helper renders our app/not-found.tsx with
+    // a clean "back to home" button instead of an infinite loader.
     if (err instanceof ApiError && err.status === 404) notFound();
-    throw err;
+    if (process.env.NODE_ENV === 'development') throw err;
+    notFound();
   }
 
   const showtimes = await serverFetch<ShowtimeRow[]>('/showtimes', {
@@ -57,9 +65,14 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
       <BackdropHeader movie={movie} />
 
       <div className="container -mt-32 grid gap-12 pb-16 md:grid-cols-[280px_1fr]">
-        <div className="relative -mt-12 aspect-[2/3] w-full max-w-[280px] overflow-hidden rounded-xl border-4 border-background shadow-2xl">
+        <div className="border-background relative -mt-12 aspect-[2/3] w-full max-w-[280px] overflow-hidden rounded-xl border-4 shadow-2xl">
           {movie.posterUrl ? (
-            <Image src={tmdbImage(movie.posterUrl, 'w500') ?? ''} alt={movie.title} fill className="object-cover" />
+            <Image
+              src={tmdbImage(movie.posterUrl, 'w500') ?? ''}
+              alt={movie.title}
+              fill
+              className="object-cover"
+            />
           ) : null}
         </div>
 
@@ -76,7 +89,9 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
                 </Badge>
               ))}
             </div>
-            <h1 className="mt-3 font-display text-4xl font-bold tracking-tight md:text-5xl">{movie.title}</h1>
+            <h1 className="font-display mt-3 text-4xl font-bold tracking-tight md:text-5xl">
+              {movie.title}
+            </h1>
           </div>
 
           <Meta icon={Clock} label={`${movie.runtimeMin} phút`} />
@@ -89,7 +104,7 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
             />
           )}
 
-          <p className="text-base leading-relaxed text-muted-foreground">{movie.overview}</p>
+          <p className="text-muted-foreground text-base leading-relaxed">{movie.overview}</p>
 
           <ReviewSummaryCard movieId={movie.id} />
 
@@ -109,11 +124,11 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
       </div>
 
       {movie.status === 'NOW_SHOWING' && (
-        <section className="border-t bg-muted/20 py-12">
+        <section className="bg-muted/20 border-t py-12">
           <div className="container">
             <h2 className="font-display text-3xl font-bold tracking-tight">Lịch chiếu</h2>
             {Object.keys(groupedByDate).length === 0 ? (
-              <p className="mt-6 text-sm text-muted-foreground">Chưa có lịch chiếu công khai.</p>
+              <p className="text-muted-foreground mt-6 text-sm">Chưa có lịch chiếu công khai.</p>
             ) : (
               <div className="mt-8 space-y-8">
                 {Object.entries(groupedByDate).map(([date, items]) => (
@@ -124,17 +139,17 @@ export default async function MovieDetailPage({ params }: { params: Promise<{ sl
                         <Link
                           key={s.id}
                           href={`/booking/${s.id}` as never}
-                          className="group flex items-center justify-between rounded-lg border bg-card p-4 transition-all hover:border-brand hover:shadow-md hover:shadow-brand/20"
+                          className="bg-card hover:border-brand hover:shadow-brand/20 group flex items-center justify-between rounded-lg border p-4 transition-all hover:shadow-md"
                         >
                           <div>
                             <div className="text-lg font-semibold">{formatTime(s.startAt)}</div>
-                            <div className="mt-0.5 text-xs text-muted-foreground">
+                            <div className="text-muted-foreground mt-0.5 text-xs">
                               {s.room.theater.name} · {s.room.name}
                             </div>
                           </div>
                           <div className="text-right">
                             <Badge variant="brand">{s.format}</Badge>
-                            <div className="mt-1 text-xs text-muted-foreground">
+                            <div className="text-muted-foreground mt-1 text-xs">
                               từ {formatVnd(s.basePriceVnd)}
                             </div>
                           </div>
@@ -159,14 +174,20 @@ function BackdropHeader({ movie }: { movie: Movie }) {
       {backdrop ? (
         <Image src={backdrop} alt={movie.title} fill priority className="object-cover" />
       ) : null}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+      <div className="from-background via-background/80 to-background/30 absolute inset-0 bg-gradient-to-t" />
     </div>
   );
 }
 
-function Meta({ icon: Icon, label }: { icon: React.ComponentType<{ className?: string }>; label: string }) {
+function Meta({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="text-muted-foreground flex items-center gap-2 text-sm">
       <Icon className="h-4 w-4" />
       <span>{label}</span>
     </div>
