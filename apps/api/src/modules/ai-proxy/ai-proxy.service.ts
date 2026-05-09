@@ -1,7 +1,11 @@
 import { createHmac } from 'crypto';
 
 import { Injectable } from '@nestjs/common';
-import type { ConfigService } from '@nestjs/config';
+// NestJS DI relies on runtime metadata reflection — ConfigService MUST be a
+// regular value import (not `import type`), otherwise tsc erases it and the
+// container can't resolve the constructor parameter.
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AiProxyService {
