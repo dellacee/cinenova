@@ -1,4 +1,3 @@
-import { VersioningType } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -22,7 +21,6 @@ async function bootstrap() {
   });
 
   app.setGlobalPrefix('api');
-  app.enableVersioning({ type: VersioningType.URI, defaultVersion: '1' });
 
   // Validation is handled per-route via parseWith() with Zod schemas (see
   // common/pipes/zod-validation.pipe.ts). We deliberately do not register
