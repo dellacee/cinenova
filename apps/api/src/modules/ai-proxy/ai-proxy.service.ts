@@ -1,7 +1,7 @@
 import { createHmac } from 'crypto';
 
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AiProxyService {
@@ -21,7 +21,14 @@ export class AiProxyService {
   }
 
   baseUrl(): string {
-    return this.config.getOrThrow<string>('AI_SERVICE_URL').replace(/\/$/, '');
+    let url = this.config.getOrThrow<string>('AI_SERVICE_URL').replace(/\/$/, '');
+    // Render's `fromService.hostport` resolver returns `host:port` without a
+    // scheme, which breaks new URL(). Default to https:// when no scheme is
+    // present so the proxy works regardless of how the env was supplied.
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+    return url;
   }
 
   serviceHeaders(): Record<string, string> {

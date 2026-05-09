@@ -24,10 +24,7 @@ services:
       - key: SERVICE_TOKEN_SECRET
         generateValue: true
       - key: AI_SERVICE_URL
-        fromService:
-          type: web
-          name: cinenova-ai
-          property: hostport
+        value: https://cinenova-ai.onrender.com
       - key: NEXT_PUBLIC_APP_URL
         value: https://cinenova.vercel.app
       - key: PAYMENT_PROVIDER
