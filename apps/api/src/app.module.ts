@@ -13,6 +13,7 @@ import { QrModule } from './infra/qr/qr.module.js';
 import { RedisModule } from './infra/redis/redis.module.js';
 import { JobsModule } from './jobs/jobs.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { AiProxyModule } from './modules/ai-proxy/ai-proxy.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { BookingsModule } from './modules/bookings/bookings.module.js';
 import { ConcessionsModule } from './modules/concessions/concessions.module.js';
@@ -51,6 +52,7 @@ import { TheatersModule } from './modules/theaters/theaters.module.js';
     PaymentsModule,
     ConcessionsModule,
     AdminModule,
+    AiProxyModule,
     HealthModule,
     JobsModule,
   ],
