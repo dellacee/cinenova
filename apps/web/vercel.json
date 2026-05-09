@@ -2,5 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
   "installCommand": "cd ../.. && npx --yes pnpm@9.15.0 install --no-frozen-lockfile",
-  "buildCommand": "cd ../.. && npx --yes pnpm@9.15.0 --filter @cinenova/db db:generate && npx --yes pnpm@9.15.0 --filter @cinenova/web build"
+  "buildCommand": "cd ../.. && npx --yes pnpm@9.15.0 --filter @cinenova/shared build && npx --yes pnpm@9.15.0 --filter @cinenova/db db:generate && npx --yes pnpm@9.15.0 --filter @cinenova/web build"
 }
