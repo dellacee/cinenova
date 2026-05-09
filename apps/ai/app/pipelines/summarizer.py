@@ -35,8 +35,8 @@ No prose, no Markdown — JSON only.
 async def summarize_movie(session: AsyncSession, movie_id: str) -> ReviewSummary | None:
     sql = text("""
         SELECT text FROM reviews
-        WHERE movie_id = :mid AND text IS NOT NULL
-        ORDER BY created_at DESC
+        WHERE "movieId" = :mid AND text IS NOT NULL
+        ORDER BY "createdAt" DESC
         LIMIT 20
     """)
     rows = (await session.execute(sql, {"mid": movie_id})).mappings().all()

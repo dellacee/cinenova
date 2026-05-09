@@ -40,6 +40,11 @@ Hard rules:
 """
 
 
+# Prisma keeps column names in camelCase; Postgres requires double quotes for
+# any non-lowercase identifier. Result aliases stay snake_case so the Python
+# row mappers can keep using snake_case keys.
+
+
 async def retrieve(
     session: AsyncSession,
     query: str,
@@ -60,34 +65,36 @@ async def retrieve(
     sql = text(f"""
         WITH closest AS (
             SELECT
-                m.id, m.title, m.overview, m.age_rating, m.runtime_min,
+                m.id, m.title, m.overview,
+                m."ageRating" AS age_rating,
+                m."runtimeMin" AS runtime_min,
                 1 - (me.embedding <=> '{vec_literal}'::vector) AS similarity
             FROM movies m
-            JOIN movie_embeddings me ON me.movie_id = m.id
-            WHERE m.deleted_at IS NULL AND m.status = 'NOW_SHOWING'
+            JOIN movie_embeddings me ON me."movieId" = m.id
+            WHERE m."deletedAt" IS NULL AND m.status = 'NOW_SHOWING'
             ORDER BY me.embedding <=> '{vec_literal}'::vector
             LIMIT :limit
         )
         SELECT
             c.id, c.title, c.overview, c.age_rating, c.runtime_min, c.similarity,
             (
-                SELECT s.start_at::text
+                SELECT s."startAt"::text
                 FROM showtimes s
-                WHERE s.movie_id = c.id
-                  AND s.is_cancelled = FALSE
-                  AND s.start_at > NOW()
-                ORDER BY s.start_at ASC
+                WHERE s."movieId" = c.id
+                  AND s."isCancelled" = FALSE
+                  AND s."startAt" > NOW()
+                ORDER BY s."startAt" ASC
                 LIMIT 1
             ) AS next_showtime,
             (
                 SELECT t.name
                 FROM showtimes s
-                JOIN screening_rooms r ON r.id = s.room_id
-                JOIN theaters t ON t.id = r.theater_id
-                WHERE s.movie_id = c.id
-                  AND s.is_cancelled = FALSE
-                  AND s.start_at > NOW()
-                ORDER BY s.start_at ASC
+                JOIN screening_rooms r ON r.id = s."roomId"
+                JOIN theaters t ON t.id = r."theaterId"
+                WHERE s."movieId" = c.id
+                  AND s."isCancelled" = FALSE
+                  AND s."startAt" > NOW()
+                ORDER BY s."startAt" ASC
                 LIMIT 1
             ) AS cinema_name
         FROM closest c

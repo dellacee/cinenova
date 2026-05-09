@@ -20,6 +20,11 @@ COLLAB_WEIGHT = 0.3
 SHOWTIME_BOOST = 1.2
 
 
+# Prisma maps table names to snake_case (via @@map) but leaves column names in
+# camelCase. Postgres preserves quoted identifiers, so any non-lowercase column
+# must be wrapped in double quotes.
+
+
 async def recommend(
     session: AsyncSession,
     *,
@@ -36,7 +41,10 @@ async def recommend(
     if user_id:
         history_count = (
             await session.execute(
-                text("SELECT COUNT(*) FROM bookings WHERE user_id = :uid AND status = 'CONFIRMED'"),
+                text(
+                    'SELECT COUNT(*) FROM bookings WHERE "userId" = :uid '
+                    "AND status = 'CONFIRMED'"
+                ),
                 {"uid": user_id},
             )
         ).scalar_one()
@@ -48,43 +56,43 @@ async def recommend(
 async def _personalized(session: AsyncSession, user_id: str, limit: int) -> list[RecommendedMovie]:
     sql = text("""
         WITH user_movies AS (
-            SELECT DISTINCT s.movie_id
+            SELECT DISTINCT s."movieId" AS movie_id
             FROM bookings b
-            JOIN showtimes s ON s.id = b.showtime_id
-            WHERE b.user_id = :uid AND b.status = 'CONFIRMED'
+            JOIN showtimes s ON s.id = b."showtimeId"
+            WHERE b."userId" = :uid AND b.status = 'CONFIRMED'
         ),
         user_centroid AS (
             SELECT AVG(me.embedding) AS vec
             FROM user_movies um
-            JOIN movie_embeddings me ON me.movie_id = um.movie_id
+            JOIN movie_embeddings me ON me."movieId" = um.movie_id
         ),
         co_bookings AS (
-            SELECT s2.movie_id AS rec_id, COUNT(*) AS co_count
+            SELECT s2."movieId" AS rec_id, COUNT(*) AS co_count
             FROM bookings b1
-            JOIN showtimes s1 ON s1.id = b1.showtime_id
-            JOIN bookings b2 ON b2.user_id != b1.user_id AND b2.status = 'CONFIRMED'
-            JOIN showtimes s2 ON s2.id = b2.showtime_id
-            WHERE b1.user_id = :uid
+            JOIN showtimes s1 ON s1.id = b1."showtimeId"
+            JOIN bookings b2 ON b2."userId" != b1."userId" AND b2.status = 'CONFIRMED'
+            JOIN showtimes s2 ON s2.id = b2."showtimeId"
+            WHERE b1."userId" = :uid
               AND b1.status = 'CONFIRMED'
-              AND s2.movie_id NOT IN (SELECT movie_id FROM user_movies)
-            GROUP BY s2.movie_id
+              AND s2."movieId" NOT IN (SELECT movie_id FROM user_movies)
+            GROUP BY s2."movieId"
         ),
         scored AS (
             SELECT
-                m.id, m.slug, m.title, m.poster_url,
+                m.id, m.slug, m.title, m."posterUrl" AS poster_url,
                 COALESCE(1 - (me.embedding <=> uc.vec), 0) AS sim,
                 COALESCE(cb.co_count::float / NULLIF((SELECT MAX(co_count) FROM co_bookings), 0), 0) AS collab,
                 EXISTS(
                     SELECT 1 FROM showtimes s
-                    WHERE s.movie_id = m.id
-                      AND s.is_cancelled = FALSE
-                      AND s.start_at BETWEEN NOW() AND NOW() + INTERVAL '24 hours'
+                    WHERE s."movieId" = m.id
+                      AND s."isCancelled" = FALSE
+                      AND s."startAt" BETWEEN NOW() AND NOW() + INTERVAL '24 hours'
                 ) AS has_soon
             FROM movies m
-            LEFT JOIN movie_embeddings me ON me.movie_id = m.id
+            LEFT JOIN movie_embeddings me ON me."movieId" = m.id
             LEFT JOIN co_bookings cb ON cb.rec_id = m.id
             CROSS JOIN user_centroid uc
-            WHERE m.deleted_at IS NULL
+            WHERE m."deletedAt" IS NULL
               AND m.status = 'NOW_SHOWING'
               AND m.id NOT IN (SELECT movie_id FROM user_movies)
         )
@@ -112,10 +120,10 @@ async def _personalized(session: AsyncSession, user_id: str, limit: int) -> list
 
 async def _cold_start(session: AsyncSession, limit: int) -> list[RecommendedMovie]:
     sql = text("""
-        SELECT id, slug, title, poster_url,
-               (COALESCE(vote_average, 0) * 0.7 + COALESCE(popularity, 0) * 0.0005) AS score
+        SELECT id, slug, title, "posterUrl" AS poster_url,
+               (COALESCE("voteAverage", 0) * 0.7 + COALESCE(popularity, 0) * 0.0005) AS score
         FROM movies
-        WHERE deleted_at IS NULL AND status = 'NOW_SHOWING'
+        WHERE "deletedAt" IS NULL AND status = 'NOW_SHOWING'
         ORDER BY score DESC
         LIMIT :limit
     """)
