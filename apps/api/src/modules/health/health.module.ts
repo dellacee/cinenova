@@ -3,8 +3,13 @@ import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 
 import { Public } from '../../common/decorators/public.decorator.js';
-import type { PrismaService } from '../../infra/prisma/prisma.service.js';
-import type { RedisService } from '../../infra/redis/redis.service.js';
+// NestJS DI requires value imports for constructor-injected services. Linters
+// keep "fixing" these to `import type` because the symbols only appear as
+// parameter types; we pin them with eslint-disable comments to prevent that.
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { PrismaService } from '../../infra/prisma/prisma.service.js';
+// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+import { RedisService } from '../../infra/redis/redis.service.js';
 
 // Render's free-tier health-check pings these endpoints frequently. Skip
 // rate-limiting on the whole controller so a healthy probe never burns
