@@ -37,7 +37,10 @@ import { TheatersModule } from './modules/theaters/theaters.module.js';
         redact: ['req.headers.authorization', 'req.headers.cookie'],
       },
     }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 120 },
+      { name: 'ai', ttl: 60_000, limit: 10 },
+    ]),
 
     PrismaModule,
     RedisModule,

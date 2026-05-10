@@ -3,7 +3,11 @@
  * Use server-side `serverFetch` in RSC; client-side `apiFetch` from interactive code.
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+// Use || (not ??) so empty-string values from misconfigured env vars also
+// fall through to the default. Vercel "Sensitive" env vars get exposed as
+// '' at build time, which would otherwise produce an invalid URL and crash
+// the /_not-found page collector.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
 const TIMEOUT_MS = 10_000;
 
 if (
