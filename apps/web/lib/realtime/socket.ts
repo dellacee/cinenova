@@ -7,7 +7,7 @@ let socket: Socket | null = null;
 export function getSeatsSocket(userId: string): Socket {
   if (socket && socket.connected) return socket;
 
-  const url = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:4000';
+  const url = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:4000';
   socket = io(`${url}/seats`, {
     transports: ['websocket'],
     auth: { userId },

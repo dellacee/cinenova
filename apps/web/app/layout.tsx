@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   title: { default: 'CineNova — Where every seat tells a story', template: '%s · CineNova' },
   description:
     'CineNova is a modern cinema booking platform with realtime seat selection, smart recommendations, and an AI movie assistant.',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   applicationName: 'CineNova',
   authors: [{ name: 'dellacee' }],
   openGraph: {
@@ -34,8 +34,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
-      <body className="min-h-screen bg-background font-sans">
+    <html
+      lang="vi"
+      suppressHydrationWarning
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+    >
+      <body className="bg-background min-h-screen font-sans">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <QueryProvider>
             {children}

@@ -38,9 +38,12 @@ export function formatTime(d: string | Date): string {
   return new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(date);
 }
 
-export function tmdbImage(path: string | null, size: 'w300' | 'w500' | 'w780' | 'original' = 'w500') {
+export function tmdbImage(
+  path: string | null,
+  size: 'w300' | 'w500' | 'w780' | 'original' = 'w500',
+) {
   if (!path) return null;
-  const base = process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE ?? 'https://image.tmdb.org/t/p/w500';
+  const base = process.env.NEXT_PUBLIC_TMDB_IMAGE_BASE || 'https://image.tmdb.org/t/p/w500';
   if (path.startsWith('http')) return path;
   const root = base.replace(/\/(w\d+|original)$/, '');
   return `${root}/${size}${path.startsWith('/') ? path : `/${path}`}`;
