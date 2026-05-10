@@ -16,7 +16,7 @@ export interface ChatStreamOptions {
 }
 
 export async function streamChat(options: ChatStreamOptions): Promise<void> {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:4000';
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:4000';
   const res = await fetch(`${apiBase}/api/ai/chat`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
