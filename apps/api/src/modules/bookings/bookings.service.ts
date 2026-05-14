@@ -7,11 +7,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import type { PrismaService } from '../../infra/prisma/prisma.service.js';
-import type { QrService } from '../../infra/qr/qr.service.js';
-import type { SeatLockService } from '../seats/seat-lock.service.js';
-import type { SeatsGateway } from '../seats/seats.gateway.js';
-import type { VouchersService } from '../vouchers/vouchers.service.js';
+// NestJS DI needs runtime metadata for these — keep them as value imports.
+import { PrismaService } from '../../infra/prisma/prisma.service.js';
+import { QrService } from '../../infra/qr/qr.service.js';
+import { SeatLockService } from '../seats/seat-lock.service.js';
+import { SeatsGateway } from '../seats/seats.gateway.js';
+import { VouchersService } from '../vouchers/vouchers.service.js';
 
 const SEAT_TYPE_MULTIPLIER = { STANDARD: 1, VIP: 1.4, COUPLE: 1.8 } as const;
 const FORMAT_MULTIPLIER = { D2: 1, D3: 1.2, IMAX: 1.6 } as const;

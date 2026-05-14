@@ -16,7 +16,12 @@ module.exports = {
   ],
   rules: {
     'no-console': ['warn', { allow: ['warn', 'error', 'info'] }],
-    '@typescript-eslint/consistent-type-imports': 'error',
+    // NestJS DI relies on emitDecoratorMetadata reflection — value imports
+    // for injectable services and decorators MUST survive compilation. The
+    // auto-fixer for this rule kept rewriting them to `import type` (because
+    // tsc sees the symbol only as a constructor-parameter annotation), which
+    // silently broke DI at runtime. Disabled globally; rely on review.
+    '@typescript-eslint/consistent-type-imports': 'off',
     '@typescript-eslint/no-unused-vars': 'off',
     'unused-imports/no-unused-imports': 'error',
     'unused-imports/no-unused-vars': [
