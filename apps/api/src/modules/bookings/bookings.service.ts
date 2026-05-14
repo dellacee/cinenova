@@ -1,12 +1,17 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
-
 import { type CreateBookingDraftRequest } from '@cinenova/shared';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 
-import { PrismaService } from '../../infra/prisma/prisma.service.js';
-import { QrService } from '../../infra/qr/qr.service.js';
-import { SeatLockService } from '../seats/seat-lock.service.js';
-import { SeatsGateway } from '../seats/seats.gateway.js';
-import { VouchersService } from '../vouchers/vouchers.service.js';
+import type { PrismaService } from '../../infra/prisma/prisma.service.js';
+import type { QrService } from '../../infra/qr/qr.service.js';
+import type { SeatLockService } from '../seats/seat-lock.service.js';
+import type { SeatsGateway } from '../seats/seats.gateway.js';
+import type { VouchersService } from '../vouchers/vouchers.service.js';
 
 const SEAT_TYPE_MULTIPLIER = { STANDARD: 1, VIP: 1.4, COUPLE: 1.8 } as const;
 const FORMAT_MULTIPLIER = { D2: 1, D3: 1.2, IMAX: 1.6 } as const;
@@ -72,7 +77,7 @@ export class BookingsService {
       const items = await this.prisma.concessionItem.findMany({
         where: { id: { in: input.concessions.map((c) => c.itemId) }, isActive: true },
       });
-      const byId = new Map(items.map((i) => [i.id, i]));
+      const byId = new Map(items.map((i) => [i.id, i] as const));
       for (const c of input.concessions) {
         const item = byId.get(c.itemId);
         if (!item) throw new BadRequestException(`Concession '${c.itemId}' not available`);
@@ -105,7 +110,13 @@ export class BookingsService {
           discountAmountVnd: discount,
           finalAmountVnd: final,
           expiresAt,
-          seats: { create: seatPrices.map((p) => ({ seatId: p.seatId, showtimeId: showtime.id, priceSnapshotVnd: p.priceSnapshotVnd })) },
+          seats: {
+            create: seatPrices.map((p) => ({
+              seatId: p.seatId,
+              showtimeId: showtime.id,
+              priceSnapshotVnd: p.priceSnapshotVnd,
+            })),
+          },
           concessions: concessionLines.length > 0 ? { create: concessionLines } : undefined,
           ...(voucherId
             ? { vouchers: { create: { voucherId, discountAppliedVnd: discount } } }
@@ -118,9 +129,7 @@ export class BookingsService {
 
     // 5. Extend Redis TTLs to cover the payment window.
     await Promise.all(
-      input.seatIds.map((seatId) =>
-        this.seatLock.extend(input.showtimeId, seatId, userId),
-      ),
+      input.seatIds.map((seatId) => this.seatLock.extend(input.showtimeId, seatId, userId)),
     );
 
     return {
@@ -143,7 +152,9 @@ export class BookingsService {
     if (!booking) throw new NotFoundException(`Booking '${bookingId}' not found`);
 
     // Idempotency check — re-runs of the same webhook are no-ops.
-    const existingPayment = await this.prisma.payment.findUnique({ where: { providerRef: input.providerRef } });
+    const existingPayment = await this.prisma.payment.findUnique({
+      where: { providerRef: input.providerRef },
+    });
     if (existingPayment) {
       this.logger.warn(`Duplicate webhook for providerRef ${input.providerRef} — ignoring`);
       return { bookingId: booking.id, status: booking.status };
@@ -170,7 +181,12 @@ export class BookingsService {
 
       await tx.booking.update({
         where: { id: booking.id },
-        data: { status: 'CONFIRMED', confirmedAt: new Date(), qrToken: token, paymentRef: input.providerRef },
+        data: {
+          status: 'CONFIRMED',
+          confirmedAt: new Date(),
+          qrToken: token,
+          paymentRef: input.providerRef,
+        },
       });
 
       for (const v of booking.vouchers) {
@@ -221,7 +237,8 @@ export class BookingsService {
     const booking = await this.prisma.booking.findUnique({ where: { id: bookingId } });
     if (!booking) throw new NotFoundException(`Booking '${bookingId}' not found`);
     if (booking.userId !== userId) throw new BadRequestException('Not your booking');
-    if (booking.status !== 'PENDING') throw new ConflictException(`Cannot cancel — status ${booking.status}`);
+    if (booking.status !== 'PENDING')
+      throw new ConflictException(`Cannot cancel — status ${booking.status}`);
 
     await this.prisma.booking.update({
       where: { id: booking.id },
@@ -261,7 +278,8 @@ export class BookingsService {
         payments: true,
       },
     });
-    if (!booking || booking.userId !== userId) throw new NotFoundException(`Booking '${bookingId}' not found`);
+    if (!booking || booking.userId !== userId)
+      throw new NotFoundException(`Booking '${bookingId}' not found`);
     return booking;
   }
 
@@ -281,7 +299,10 @@ export class BookingsService {
       for (const s of b.seats) {
         await this.seatLock.release(b.showtimeId, s.seatId, b.userId);
       }
-      this.seatsGateway.broadcastReleased(b.showtimeId, b.seats.map((s) => s.seatId));
+      this.seatsGateway.broadcastReleased(
+        b.showtimeId,
+        b.seats.map((s) => s.seatId),
+      );
     }
     return overdue.length;
   }
